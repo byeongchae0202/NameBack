@@ -1,0 +1,14 @@
+node_modules/
+dist/
+release/
+coverage/
+.build/
+__pycache__/
+*.py[cod]
+*.spec
+.venv/
+venv/
+resources/sidecar/
+*.db
+*.db-shm
+*.db-wal
