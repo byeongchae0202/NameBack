@@ -141,6 +141,8 @@ h1 { margin: 0; color: var(--ink); font-size: 24px; font-weight: 620; line-heigh
 .browser-table-scroll table { width: 100%; min-width: 660px; }
 .browser-table-scroll thead th { height: 40px; color: #66736d; background: #f3f6f4; font-size: 11px; }
 .browser-table-scroll tbody td { height: 58px; border-top: 1px solid #e6ece8; }
+.browser-table-scroll .exclude-column { width: 52px; min-width: 52px; text-align: center; }
+.browser-table-scroll .exclude-column button { min-width: 32px; }
 .browser-target { color: #176b59; font-weight: 600; }
 .browser-name-editor { display: grid; grid-template-columns: minmax(90px, 1fr) auto; align-items: center; gap: 5px 8px; min-width: 190px; }
 .browser-name-editor .browser-input-invalid input { border-color: #b10e1e; }

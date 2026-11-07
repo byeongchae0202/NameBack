@@ -23,6 +23,7 @@ import {
   ArrowClockwiseRegular,
   ArrowDownloadRegular,
   DismissCircleRegular,
+  DismissRegular,
   FolderOpenRegular,
   MusicNote2Regular,
   ShieldLockRegular,
@@ -251,6 +252,30 @@ function BrowserAppContent() {
     return item.status === 'unverified' || editError(item) ? null : draftName(item);
   }
 
+  function excludeFile(item: RecoveryPreview): void {
+    if (busy) return;
+    const remaining = results.filter((result) => result.sourceIndex !== item.sourceIndex);
+    const nextFiles = filesRef.current.filter((_, index) => index !== item.sourceIndex);
+    const nextDrafts: Record<number, string> = {};
+    remaining.forEach((result, index) => {
+      const draft = filenameDrafts[result.sourceIndex];
+      if (draft !== undefined) nextDrafts[index] = draft;
+    });
+
+    filesRef.current = nextFiles;
+    setSelectedFileCount(nextFiles.length);
+    setResults(remaining.map((result, sourceIndex) => ({ ...result, sourceIndex })));
+    setFilenameDrafts(nextDrafts);
+    setError(null);
+    if (nextFiles.length === 0) {
+      setProgress(emptyProgress);
+      setNotice(null);
+      setPhase('idle');
+    } else {
+      setNotice(`파일 1개 제외 · ${nextFiles.length}개 남음`);
+    }
+  }
+
   function clearSelection(): void {
     jobIdRef.current = null;
     workerRef.current?.terminate();
@@ -456,6 +481,7 @@ function BrowserAppContent() {
                     <TableHeaderCell>제목 · 아티스트</TableHeaderCell>
                     <TableHeaderCell>복구 파일명 편집</TableHeaderCell>
                     <TableHeaderCell>결과</TableHeaderCell>
+                    <TableHeaderCell className="exclude-column">제외</TableHeaderCell>
                   </TableRow></TableHeader>
                   <TableBody>{results.map((item) => (
                     <TableRow key={`${item.sourceIndex}-${item.currentName}`}>
@@ -483,6 +509,16 @@ function BrowserAppContent() {
                         <Badge appearance="tint" color={editError(item) || item.status === 'unverified' ? 'warning' : item.status === 'collision' ? 'danger' : 'success'}>
                           {editError(item) ? '이름 확인 필요' : displayStatus(item)}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="exclude-column">
+                        <Button
+                          appearance="subtle"
+                          icon={<DismissRegular />}
+                          aria-label={`${item.currentName} 제외`}
+                          title="이 파일을 ZIP 대상에서 제외"
+                          disabled={busy}
+                          onClick={() => excludeFile(item)}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}</TableBody>
