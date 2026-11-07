@@ -1,25 +1,30 @@
 # NameBack
 
-복구된 MP3의 내부 곡 제목 태그를 읽어 파일명을 안전하게 바꾸는 Windows 데스크톱 앱입니다. 파일 내용은 수정하지 않으며, 변경 전 미리보기와 변경 이력 기반 복원을 제공합니다.
+복구된 미디어의 제목 정보를 확인해 파일명을 안전하게 되돌리는 도구입니다. Windows 데스크톱 앱은 로컬 MP3 폴더에서 이름을 바꾸고 변경 이력을 보관합니다. 별도 웹 빌드는 사용자가 선택한 오디오·동영상 파일을 브라우저에서만 분석하고 ZIP으로 저장합니다.
 
 ## 개발 실행
 
-```powershell
+```sh
 npm install
-py -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r python/requirements.txt
 npm run dev
 ```
 
+`npm run dev`는 브라우저 SPA를 `http://localhost:5173`에서 실행합니다. Electron 개발 실행은 `npm run dev:electron`을 사용합니다.
+
 앱은 선택한 폴더 바로 아래의 MP3만 검색합니다. 제목 태그가 없거나 안전한 파일명으로 만들 수 없는 파일은 변경하지 않고 미확인 목록에 표시합니다. 같은 파일명이 있으면 번호를 붙여 덮어쓰기를 방지합니다.
+
+## 브라우저 앱
+
+`npm run build` 결과는 정적 SPA입니다. 오디오(MP3, M4A, WAV, FLAC, OGG 등)와 동영상(MP4, AVI, MKV, MOV, WebM 등)을 선택할 수 있으며, 지원되는 메타데이터를 우선 사용하고 태그가 없으면 의미 있는 원본 파일명에서만 제목을 추정합니다. 임시 식별자뿐인 파일명은 잘못된 이름으로 복구하지 않고 미확인으로 둡니다.
+
+파일당 최대 크기는 1 GiB, 한 번에 선택할 수 있는 전체 크기는 2 GiB입니다. 파일 내용과 태그 정보는 서버로 전송되지 않습니다. ZIP은 워커에서 스트리밍 생성하고 Chromium의 파일 저장 스트림을 우선 사용합니다. 해당 기능이 없는 브라우저는 ZIP 전체를 메모리에 보관하므로 512 MiB 초과 시 확인을 요청합니다.
 
 ## 검증 및 Windows 패키징
 
 ```powershell
 npm test
 npm run build
-.\.venv\Scripts\Activate.ps1
 npm run package:win
 ```
 
-처리와 이력 저장은 로컬에서 수행하며 온라인 음악 정보 검색이나 AI 기능을 사용하지 않습니다.
+처리와 이력 저장은 로컬에서 수행하며 온라인 음악 정보 검색이나 AI 기능을 사용하지 않습니다. Python/Mutagen 사이드카는 마이그레이션 기준선 비교가 끝날 때까지 참조용으로만 유지됩니다.

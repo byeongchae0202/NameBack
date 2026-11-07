@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 const INVALID_WINDOWS_CHARACTERS = /[<>:"/\\|?*\u0000-\u001f]/g;
 const RESERVED_WINDOWS_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
 
@@ -50,11 +48,8 @@ export function allocateFilename(
   }
 }
 
-export function isDirectChild(folderPath: string, filePath: string): boolean {
-  return path.dirname(path.resolve(filePath)).toLocaleLowerCase('en-US') ===
-    path.resolve(folderPath).toLocaleLowerCase('en-US');
-}
-
 export function extensionOf(filePath: string): string {
-  return path.extname(filePath);
+  const fileName = filePath.split(/[\\/]/).pop() ?? '';
+  const extensionStart = fileName.lastIndexOf('.');
+  return extensionStart > 0 ? fileName.slice(extensionStart) : '';
 }

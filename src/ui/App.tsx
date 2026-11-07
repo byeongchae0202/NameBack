@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import {
   Badge,
   Button,
@@ -39,6 +39,8 @@ import type {
   RenamePreview,
   UnverifiedEntry,
 } from '../shared/contracts';
+
+const BrowserApp = lazy(() => import('./BrowserApp').then(({ BrowserApp: component }) => ({ default: component })));
 
 type ViewKey = 'rename' | 'unverified' | 'history';
 type ThemeChoice = 'light' | 'dark' | 'system';
@@ -475,5 +477,7 @@ function AppContent() {
 }
 
 export function App() {
-  return <AppContent />;
+  return window.nameBack
+    ? <AppContent />
+    : <Suspense fallback={<div className="state-panel"><Spinner label="복구 도구를 불러오는 중" /></div>}><BrowserApp /></Suspense>;
 }

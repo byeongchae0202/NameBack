@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { parseFile } from 'music-metadata';
 import type {
   AudioFile,
   FolderScan,
@@ -12,7 +12,9 @@ import type {
   RenamePreview,
   UnverifiedEntry,
 } from '../src/shared/contracts';
-import { allocateFilename, extensionOf, isDirectChild, sanitizeTitle } from '../src/shared/filename';
+import { allocateFilename, extensionOf, sanitizeTitle } from '../src/shared/filename';
+import { normalizeMetadata } from '../src/shared/metadata';
+import { isDirectChild } from './pathSafety';
 
 interface MetadataRecord {
   path: string;
@@ -71,42 +73,19 @@ function createDatabase(): void {
   `);
 }
 
-function runMetadataReader(filePaths: string[]): Promise<MetadataRecord[]> {
-  return new Promise((resolve) => {
-    const bundledReader = path.join(process.resourcesPath, 'nameback-metadata.exe');
-    const isPackaged = app.isPackaged && fs.existsSync(bundledReader);
-    const virtualEnvPython = path.join(
-      app.getAppPath(),
-      '.venv',
-      process.platform === 'win32' ? 'Scripts' : 'bin',
-      process.platform === 'win32' ? 'python.exe' : 'python',
-    );
-    const command = isPackaged
-      ? bundledReader
-      : (process.env.NAMEBACK_PYTHON || (fs.existsSync(virtualEnvPython) ? virtualEnvPython : 'python'));
-    const args = isPackaged
-      ? []
-      : [path.join(app.getAppPath(), 'python', 'metadata_reader.py')];
-    const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.setEncoding('utf8').on('data', (chunk: string) => { stdout += chunk; });
-    child.stderr.setEncoding('utf8').on('data', (chunk: string) => { stderr += chunk; });
-    child.on('error', () => resolve(filePaths.map((filePath) => ({
-      path: filePath, title: null, artist: null, album: null,
-      error: 'Python Mutagen 처리기를 시작할 수 없습니다. 설치 안내를 확인해 주세요.',
-    }))));
-    child.on('close', (code) => {
-      try {
-        const parsed = JSON.parse(stdout) as MetadataRecord[];
-        if (Array.isArray(parsed)) return resolve(parsed);
-      } catch {}
-      const error = stderr.trim() || `메타데이터 처리기가 종료 코드 ${code ?? 'unknown'}을 반환했습니다.`;
-      resolve(filePaths.map((filePath) => ({ path: filePath, title: null, artist: null, album: null, error })));
-    });
-    child.stdin.end(JSON.stringify({ files: filePaths }));
-  });
+async function readMetadata(filePath: string): Promise<MetadataRecord> {
+  try {
+    const metadata = await parseFile(filePath, { skipCovers: true, duration: false });
+    return { path: filePath, ...normalizeMetadata(metadata.common), error: null };
+  } catch {
+    return {
+      path: filePath,
+      title: null,
+      artist: null,
+      album: null,
+      error: 'MP3 메타데이터를 읽을 수 없습니다.',
+    };
+  }
 }
 
 async function scanFolder(folderPath: string): Promise<FolderScan> {
@@ -120,7 +99,8 @@ async function scanFolder(folderPath: string): Promise<FolderScan> {
     .filter((entry) => entry.isFile() && path.extname(entry.name).toLocaleLowerCase('en-US') === '.mp3')
     .map((entry) => path.join(realFolder, entry.name))
     .sort((left, right) => left.localeCompare(right, 'ko'));
-  const metadata = await runMetadataReader(filePaths);
+  const metadata: MetadataRecord[] = [];
+  for (const filePath of filePaths) metadata.push(await readMetadata(filePath));
   const metadataByPath = new Map(metadata.map((record) => [normalized(record.path), record]));
   const files: AudioFile[] = filePaths.map((filePath) => {
     const record = metadataByPath.get(normalized(filePath));

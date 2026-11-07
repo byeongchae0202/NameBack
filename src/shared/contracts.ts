@@ -62,6 +62,41 @@ export interface FolderScan {
   files: AudioFile[];
 }
 
+export type RecoveryResultStatus = 'ready' | 'collision' | 'unchanged' | 'unverified';
+
+export interface RecoveryPreview {
+  sourceIndex: number;
+  currentName: string;
+  title: string | null;
+  artist: string | null;
+  album: string | null;
+  proposedName: string | null;
+  status: RecoveryResultStatus;
+  reason: string | null;
+}
+
+export type RecoveryWorkerRequest =
+  | { type: 'recovery:analyze'; jobId: string; files: File[] }
+  | { type: 'recovery:zip'; jobId: string; entries: Array<{ file: File; name: string }> }
+  | { type: 'recovery:cancel'; jobId: string };
+
+export type RecoveryWorkerEvent =
+  | {
+      type: 'recovery:progress';
+      jobId: string;
+      phase: 'analyze' | 'zip';
+      completed: number;
+      total: number;
+      currentFile?: string;
+      bytesCompleted?: number;
+      totalBytes?: number;
+    }
+  | { type: 'recovery:analysis-result'; jobId: string; results: RecoveryPreview[] }
+  | { type: 'recovery:zip-chunk'; jobId: string; chunk: ArrayBuffer }
+  | { type: 'recovery:zip-complete'; jobId: string; fileCount: number; size: number }
+  | { type: 'recovery:cancelled'; jobId: string }
+  | { type: 'recovery:error'; jobId: string; message: string };
+
 export interface DesktopApi {
   selectFolder(): Promise<FolderScan | null>;
   scanFolder(): Promise<FolderScan>;
